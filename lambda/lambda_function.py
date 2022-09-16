@@ -28,33 +28,34 @@ def create_kubeconfig(cluster_name):
     
     logger.info('Successfully created kubeconfig file.')
     
-def scale_down_deployment(deployment_name):
-    logger.info('Scaling down deployment.')
-    scale_down_command = f'kubectl scale deploy {deployment_name} --replicas=0 -n application'
+
+def scale_deployment(deployment_name, replicas, namespace):
+    logger.info(f"Scaling deployment {deployment_name} to {replicas} replicas in {namespace} namespace.")
+    command = f'kubectl scale deploy {deployment_name} --replicas={replicas} -n {namespace}'
     output = subprocess.run(
-        f'{scale_down_command}',
+        f'{command}',
         encoding='utf-8',
         capture_output=True,
         shell=True,
         check=False
-    )
+    ).stderr
     
-    if output.returncode != 0:
-        raise RuntimeError(f'Failed to scale down deployment {output.stderr}.')
-    
-    logger.info('Successfully scaled down the deployment.')
+    return
     
 
 def lambda_handler(event, context):
     
-    # set env variables
+    logger.info(f"Event {event}")
+    
     kube_config_path = '/tmp/kubeconfig'
     os.environ['KUBECONFIG'] = kube_config_path
     os.environ['PATH'] = '/opt/kubectl:/opt/awscli:' + os.environ['PATH']
     
     try: 
-        create_kubeconfig('prod-eks-cluster')
-        scale_down_deployment('my-app')
+        create_kubeconfig(event['ClusterName'])
+        if event['RequestType'] == 'SCALING':
+            for deployment in event['Deployments']:
+                scale_deployment(deployment['DeploymentName'], deployment['Replicas'], deployment['Namespace'])
     except Exception:
         logger.error('Signaling failure')
         sys.exit(1)
