@@ -1,0 +1,11 @@
+{
+  "RequestType": "SCALING",
+  "ClusterName": "prod-eks-cluster",
+  "Deployments": [
+    {
+      "DeploymentName": "spring-boot-app",
+      "Replicas": "0",
+      "Namespace": "application"
+    }
+  ]
+}
